@@ -7,7 +7,7 @@ PLATFORM ?= telosb
 
 # Disable MSP430 hardware multiply because it makes MSPGCC die
 PFLAGS += -mdisable-hwmul
-OPTFLAGS += -O
+# OPTFLAGS += -O
 
 MSP_BSL ?= tos-bsl
 MSP_BSL_FLAGS = --telosb
