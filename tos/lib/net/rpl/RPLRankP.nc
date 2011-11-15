@@ -738,7 +738,7 @@ printf_dbg("RankP forwarding approve 1 \n");
 	return;
       } else if (Prf > tempPrf) { //move
         //printf("MOVE TO NEW DODAG \n");
-        dbg("MRHOF","NEW DODAG\n");
+        dbg("RPLRank","NEW DODAG\n");
 	Prf = tempPrf;
 	memcpy_rpl((uint8_t*)&DODAGID, (uint8_t*)&rDODAGID, sizeof(struct in6_addr));
 	parentNum = 0;
@@ -759,7 +759,7 @@ printf_dbg("RankP forwarding approve 1 \n");
     } else if (compare_ipv6(&DODAGID, &DODAG_MAX)) { //not belong to a DODAG yet
       //      printf("TOTALLY NEW DODAG \n");
 
-      dbg("MRHOF","TOTALLY NEW DODAG\n");
+      dbg("RPLRank","TOTALLY NEW DODAG\n");
       Prf = tempPrf;
       memcpy_rpl((uint8_t*)&DODAGID, (uint8_t*)&rDODAGID, sizeof(struct in6_addr));
       parentNum = 0;
@@ -917,7 +917,7 @@ printf_dbg("Status Rank:99 %i vor Reset \n",call RPLRankInfo.getRank(&ADDR_MY_IP
 	    ignore = TRUE;
 	  }
 	} else {
-          dbg("MRHOF","parentNum = 0,resetValid\n");
+          dbg("RPLRank","parentNum = 0,resetValid\n");
 	  // not likely to happen but this is a new DODAG...
 	  Prf = tempPrf;
 	  memcpy_rpl((uint8_t*)&DODAGID, (uint8_t*)&rDODAGID, sizeof(struct in6_addr));
