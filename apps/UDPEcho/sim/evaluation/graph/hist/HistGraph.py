@@ -11,7 +11,6 @@ import logging.config
 
 from sim.utils.helper import *
 from sim.scenarios.ScenarioInformation import *
-from sim.scenarios.ExecutableInformation import *
 
 from sim.config import *
 

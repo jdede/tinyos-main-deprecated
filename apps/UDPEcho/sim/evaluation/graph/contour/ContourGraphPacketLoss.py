@@ -12,7 +12,6 @@ from matplotlib.text import Text
 
 from sim.utils.helper import *
 from sim.scenarios.ScenarioInformation import *
-from sim.scenarios.ExecutableInformation import *
 
 class ContourGraphPacketLoss:
     def __init__(self):

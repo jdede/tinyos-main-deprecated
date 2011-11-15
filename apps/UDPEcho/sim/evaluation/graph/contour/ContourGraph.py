@@ -13,7 +13,6 @@ from matplotlib.figure import SubplotParams
 
 from sim.utils.helper import *
 from sim.scenarios.ScenarioInformation import *
-from sim.scenarios.ExecutableInformation import *
 
 class ContourGraph:
     def __init__(self):
