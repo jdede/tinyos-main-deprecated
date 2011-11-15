@@ -2,13 +2,13 @@
 ##################################################
 BASESTATION_ID    = 1     # NEEDS TO BE SETTED IN Makefile/TrickleSim.h AS WELL
 
-NODES_LIST        = [9]	#Number of nodes
+NODES_LIST        = [4]	#Number of nodes
 
-DISTANCE_LIST     = [10, 50, 100]
-#DISTANCE_LIST     = [100]
+#DISTANCE_LIST     = [10, 50, 100]
+DISTANCE_LIST     = [100]
 NUM_PING          = 100
 
-MONTE_CARLO_ITERATIONS = 100
+MONTE_CARLO_ITERATIONS = 1
 
 #RANDOMIZE_BOOT      = True
 RANDOMIZE_BOOT      = False
