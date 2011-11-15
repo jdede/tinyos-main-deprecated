@@ -1,0 +1,24 @@
+Jiehui Bo
+15th November, 2011
+
+Application (UDPEcho) configuration:
+1. In the simulation, the root sends a specified number of UDPEcho packets to a node.
+2. The number of UDPEcho packets sent to each node is specified with PING_COUNT in Makefile.
+3. UDPEcho will automatically "ping" all the nodes one after another (starts from node 2), 
+   the number of nodes is specified in NETWORK_SIZE in Makefile.
+
+Simulation configuration:
+Configuration parameters for simulation are defined in sim/config.py.
+
+Scenarios are defined in sim/scenarios. Currently simulation of ContainerScenario and RandomScenario 
+are not yet enabled.  
+
+To complie for simulation, do:
+$ make micaz blip sim-rpl
+
+To run the simulation, do:
+$ python sim/Simulation.py
+the usages of options -s -e -d can be found in sim/Simulation.py
+
+
+
