@@ -80,6 +80,7 @@ configuration RF212RadioC
 		interface PacketField<uint8_t> as PacketLinkQuality;
 		interface PacketField<uint8_t> as PacketTransmitPower;
 		interface PacketField<uint8_t> as PacketRSSI;
+		interface LinkPacketMetadata;
 
 		interface LocalTime<TRadio> as LocalTimeRadio;
 		interface PacketTimeStamp<TRadio, uint32_t> as PacketTimeStampRadio;
@@ -289,10 +290,10 @@ implementation
 	PacketTransmitPower = RadioDriverLayerC.PacketTransmitPower;
 	PacketLinkQuality = RadioDriverLayerC.PacketLinkQuality;
 	PacketRSSI = RadioDriverLayerC.PacketRSSI;
+	LinkPacketMetadata = RadioDriverLayerC;
 	LocalTimeRadio = RadioDriverLayerC;
 
 	RadioDriverLayerC.TransmitPowerFlag -> MetadataFlagsLayerC.PacketFlag[unique(UQ_METADATA_FLAGS)];
 	RadioDriverLayerC.RSSIFlag -> MetadataFlagsLayerC.PacketFlag[unique(UQ_METADATA_FLAGS)];
 	RadioDriverLayerC.TimeSyncFlag -> MetadataFlagsLayerC.PacketFlag[unique(UQ_METADATA_FLAGS)];
-	RadioDriverLayerC.RadioAlarm -> RadioAlarmC.RadioAlarm[unique(UQ_RADIO_ALARM)];
 }

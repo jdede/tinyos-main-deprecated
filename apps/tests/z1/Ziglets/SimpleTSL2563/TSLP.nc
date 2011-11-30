@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 20011 ZOLERTIA LABS
+ * Copyright (c) 2011 ZOLERTIA LABS
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -160,6 +160,8 @@ implementation {
 
   event void TimeoutTimer.fired(){
     printfUART("TSL: timeout\n");
+    call Resource.release();
+    signal Light.readDone(FAIL, 0);
   }
 
   default event void Light.readDone(error_t error, uint16_t data){
