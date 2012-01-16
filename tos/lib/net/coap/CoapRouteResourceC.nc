@@ -1,6 +1,5 @@
 /*
- * Copyright (c) 2009 DEXMA SENSORS SL
- * Copyright (c) 2004-2005, Technische Universität Berlin
+ * Copyright (c) 2011 University of Bremen, TZI
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -9,12 +8,10 @@
  *
  * - Redistributions of source code must retain the above copyright
  *   notice, this list of conditions and the following disclaimer.
- *
  * - Redistributions in binary form must reproduce the above copyright
  *   notice, this list of conditions and the following disclaimer in the
  *   documentation and/or other materials provided with the
  *   distribution.
- *
  * - Neither the name of the copyright holders nor the names of
  *   its contributors may be used to endorse or promote products derived
  *   from this software without specific prior written permission.
@@ -33,28 +30,12 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/*
- * Byte-level interface to control a USCI. 
- * <p>The USCI can be switched to SPI, UART or I2C mode. The interface follows
- * the convention of being stateless, thus a higher layer has to maintain
- * state information.
- *
- * @author Jan Hauer (hauer@tkn.tu-berlin.de)
- * @author Joe Polastre
- */
-
-#include "msp430usci.h"
-
-interface HplMsp430UsciInterrupts {
-
-  /**
-   * A byte of data is about to be transmitted, ie. the TXBuffer is
-   * empty and ready to accept next byte.
-   */
-  async event void txDone();
-
-  /*
-   * A byte of data has been received.
-   */
-  async event void rxDone(uint8_t data);
-}
+generic configuration CoapRouteResourceC(typedef val_t, uint8_t uri_key) {
+  provides interface ReadResource;
+  uses interface ForwardingTable;
+} implementation {
+  components new CoapRouteResourceP(val_t, uri_key) as CoapRouteResourceP;
+//   components IPStackC;
+  ReadResource = CoapRouteResourceP;
+  ForwardingTable = CoapRouteResourceP;
+  }
