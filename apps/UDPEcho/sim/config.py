@@ -104,8 +104,8 @@ file_channels = [
 METRIC_EVAL = True
 #METRIC_EVAL = False
 
-#GRAPH_EVAL = True
-GRAPH_EVAL = False
+GRAPH_EVAL = True
+#GRAPH_EVAL = False
 GRAPH_EVAL_LIST = [
 #    "SN",
 #    "ContourGraph",

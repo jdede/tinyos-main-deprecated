@@ -7,7 +7,7 @@ from sim.evaluation.graph.contour.ContourGraphSentICMP import *
 from sim.evaluation.graph.contour.ContourGraphPacketLoss import *
 from sim.evaluation.graph.hist.HistGraph import *
 from sim.evaluation.graph.topology.TopologyGraph import *
-from sim.evaluation.graph.topology.TopologyGraphBare import *
+#from sim.evaluation.graph.topology.TopologyGraphBare import *  # Not available
 from sim.evaluation.graph.topology.TopologyGraph_3D import *
 
 from sim.utils.helper import *
