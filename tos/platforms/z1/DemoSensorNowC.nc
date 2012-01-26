@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2005-2006 Rincon Research Corporation
+ * Copyright (c) 2005-2006 Arch Rock Corporation
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -11,7 +11,7 @@
  *   notice, this list of conditions and the following disclaimer in the
  *   documentation and/or other materials provided with the
  *   distribution.
- * - Neither the name of the Rincon Research Corporation nor the names of
+ * - Neither the name of the Arch Rock Corporation nor the names of
  *   its contributors may be used to endorse or promote products derived
  *   from this software without specific prior written permission.
  *
@@ -29,48 +29,33 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE
  */
 
-#include "TestPeriodic.h"
-
-/**
- * This app sends a message from Transmitter node to AM_BROADCAST_ADDR
- * and waits 1000 ms between each delivery so the Rx mote's radio
- * shuts back off and has to redetect to receive the next message. 
- * Receiver: TOS_NODE_ID != 1
- * Transmitter: TOS_NODE_ID == 1
+/** 
+ * DemoSensorNowC is a generic sensor device that provides a 16-bit
+ * value that can be read from async context. The platform author
+ * chooses which sensor actually sits behind DemoSensorNowC, and
+ * though it's probably Voltage, Light, or Temperature, there are no
+ * guarantees.
  *
- * @author David Moss
+ * This particular DemoSensorNowC on the telosb platform provides a
+ * voltage reading, using VoltageC.
+ *
+ * To convert from ADC counts to actual voltage, divide this reading
+ * by 4096 and multiply by 3.
+ *
+ * @author Gilman Tolle <gtolle@archrock.com>
+ * @version $Revision: 1.4 $ $Date: 2006-12-12 18:23:45 $
+ * 
  */
- 
-configuration TestPeriodicAppC {
+
+generic configuration DemoSensorNowC()
+{
+  provides interface Resource;
+  provides interface ReadNow<uint16_t>;
 }
+implementation
+{
+  components new Msp430InternalVoltageC() as DemoSensorNow;
 
-implementation {
-
-  components TestPeriodicC,
-      MainC,
-      ActiveMessageC,
-      new TimerMilliC(),
-      new AMSenderC(AM_TESTPERIODICMSG),
-      new AMReceiverC(AM_TESTPERIODICMSG),
-      LedsC;
-
-  TestPeriodicC.Boot -> MainC;
-  TestPeriodicC.SplitControl -> ActiveMessageC;
-  TestPeriodicC.LowPowerListening -> Lpl;
-  TestPeriodicC.AMPacket -> ActiveMessageC;
-  TestPeriodicC.AMSend -> AMSenderC;
-  TestPeriodicC.Receive -> AMReceiverC;
-  TestPeriodicC.Packet -> ActiveMessageC;
-  TestPeriodicC.Timer -> TimerMilliC;
-  TestPeriodicC.Leds -> LedsC;
-
-#if defined(PLATFORM_MICA2) || defined(PLATFORM_MICA2DOT)
-  components CC1000ActiveMessageC as Lpl;
-#elif defined(PLATFORM_MICAZ) || defined(PLATFORM_TELOSB) || defined(PLATFORM_SHIMMER) || defined(PLATFORM_SHIMMER2) || defined(PLATFORM_INTELMOTE2) || defined(PLATFORM_EPIC) || defined(PLATFORM_Z1)
-  components CC2420ActiveMessageC as Lpl;
-#else
-#error "LPL testing not supported on this platform"
-#endif      
-
+  Resource = DemoSensorNow;
+  ReadNow = DemoSensorNow;
 }
-
