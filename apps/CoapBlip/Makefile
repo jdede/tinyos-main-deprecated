@@ -3,9 +3,9 @@ COMPONENT=CoapBlipC
 # uncomment this for network programming support
 # BOOTLOADER=tosboot
 
-CFLAGS += -DCC2420_DEF_CHANNEL=22
+#CFLAGS += -DCC2420_DEF_CHANNEL=21
 #CFLAGS += -DRF230_DEF_CHANNEL=16
-# CFLAGS += -DCC2420_DEF_RFPOWER=3
+#CFLAGS += -DCC2420_DEF_RFPOWER=4
 
 # disables support for the AM stack, which somewhat reduces code size
 # and compresses packet formats.  If you want to use other tinyos
@@ -38,14 +38,13 @@ CFLAGS += -DCOAP_SERVER_PORT=61616L
 CFLAGS += -DMAX_URI_LENGTH=5
 # set available resources.
 # Don't forget to change CFLAG: NUM_URIS!!!!!
-CFLAGS += -DNUM_URIS=2
-# CFLAGS += -DCOAP_RESOURCE_TEMP
-# CFLAGS += -DCOAP_RESOURCE_HUM
-# CFLAGS += -DCOAP_RESOURCE_VOLT
-# CFLAGS += -DCOAP_RESOURCE_KEY
+CFLAGS += -DNUM_URIS=1
+#CFLAGS += -DCOAP_RESOURCE_TEMP
+#CFLAGS += -DCOAP_RESOURCE_HUM
+#CFLAGS += -DCOAP_RESOURCE_VOLT
+#CFLAGS += -DCOAP_RESOURCE_KEY
 CFLAGS += -DCOAP_RESOURCE_LED
-# CFLAGS += -DCOAP_RESOURCE_ALL
-CFLAGS += -DCOAP_RESOURCE_ROUTE
+#CFLAGS += -DCOAP_RESOURCE_ALL #TEMP + HUM + VOLT
 
 ################ CoAP Client ################################
 CFLAGS += -DCOAP_CLIENT_ENABLED
