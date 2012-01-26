@@ -1,4 +1,4 @@
-/// $Id: HplAtm128SpiC.nc,v 1.5 2010-06-29 22:07:43 scipio Exp $
+/// $Id: Atm128SpiC.nc,v 1.7 2010-06-29 22:07:43 scipio Exp $
 
 /*
  * Copyright (c) 2005 Stanford University. All rights reserved.
@@ -30,7 +30,9 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * Copyright (c) 2004-2005 Crossbow Technology, Inc.  All rights reserved.
+ *  Copyright (c) 2004-2005 Crossbow Technology, Inc.
+ *  Copyright (c) 2000-2005 The Regents of the University  of California.
+ *  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,7 +44,7 @@
  *   notice, this list of conditions and the following disclaimer in the
  *   documentation and/or other materials provided with the
  *   distribution.
- * - Neither the name of Crossbow Technology nor the names of
+ * - Neither the name of the copyright holder nor the names of
  *   its contributors may be used to endorse or promote products derived
  *   from this software without specific prior written permission.
  *
@@ -58,35 +60,44 @@
  * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
  */
 
 /**
- * Configuration encapsulating the basic SPI HPL for the atm128.
+ * The HAL of the SPI bus on the atm128.
  *
  * <pre>
- * $Id: HplAtm128SpiC.nc,v 1.5 2010-06-29 22:07:43 scipio Exp $
+ *  $Id: Atm128SpiC.nc,v 1.7 2010-06-29 22:07:43 scipio Exp $
  * </pre>
  *
+ *
  * @author Philip Levis
- * @author Martin Turon <mturon@xbow.com>
+ * @author Martin Turon
+ * @author Joe Polastre
+ * @date   September 7 2005
  */
 
-
-configuration HplAtm128SpiC {
-    provides interface Atm128Spi as SpiBus;
+configuration Atm128SpiC {
+  provides interface Init;
+  provides interface SpiByte;
+  provides interface FastSpiByte;
+  provides interface SpiPacket;
+  provides interface Resource[uint8_t id];
 }
-implementation
-{
-  components AtmegaGeneralIOC as IO, HplAtm128SpiP as HplSpi;
+implementation {
+  components new Atm128SpiP() as SpiMaster, HplAtm128SpiC as HplSpi;
+  components new SimpleFcfsArbiterC("Atm128SpiC.Resource") as Arbiter;
   components McuSleepC;
   
-  SpiBus = HplSpi;
-
-  HplSpi.Mcu -> McuSleepC;
-  HplSpi.SS   -> IO.PortB0;  // Slave set line
-  HplSpi.SCK  -> IO.PortB1;  // SPI clock line
-  HplSpi.MOSI -> IO.PortB2;  // Master out, slave in
-  HplSpi.MISO -> IO.PortB3;  // Master in, slave out
+  Init         = SpiMaster;
   
-  HplSpi.McuPowerOverride <- McuSleepC;
+  SpiByte      = SpiMaster;
+  FastSpiByte  = SpiMaster;
+  SpiPacket    = SpiMaster;
+  Resource     = SpiMaster;
+
+  SpiMaster.ResourceArbiter -> Arbiter;
+  SpiMaster.ArbiterInfo     -> Arbiter;
+  SpiMaster.Spi             -> HplSpi;
+  SpiMaster.McuPowerState   -> McuSleepC;
 }

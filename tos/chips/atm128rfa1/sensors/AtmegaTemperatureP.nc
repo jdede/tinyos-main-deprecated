@@ -34,10 +34,12 @@
 
 #include "Atm128Adc.h"
 
-module InternalTempP {
+module AtmegaTemperatureP
+{
   provides interface Atm128AdcConfig;
 }
-implementation {
+implementation
+{
   async command uint8_t Atm128AdcConfig.getChannel() {
     return ATM128_ADC_INT_TEMP;
   }
@@ -47,6 +49,6 @@ implementation {
   }
 
   async command uint8_t Atm128AdcConfig.getPrescaler() {
-    return ATM128_ADC_PRESCALE_32;
+    return ATM128_ADC_PRESCALE;
   }
 }

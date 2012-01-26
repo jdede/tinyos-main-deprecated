@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2010, University of Szeged
+* Copyright (c) 2011, University of Szeged
 * All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
@@ -29,51 +29,18 @@
 * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 * OF THE POSSIBILITY OF SUCH DAMAGE.
 *
-* Author: Zsolt Szabo
+* Author: Andras Biro
 */
-module I2CBusP {
-  provides interface SplitControl;
-  uses interface SplitControl as TemphumSplit;
-  uses interface SplitControl as LightSplit;
-  uses interface SplitControl as PressureSplit;
-  uses interface Timer<TMilli>;
-  uses interface GeneralIO as Power;
+
+configuration I2CBusPowerManagerC{
+  provides interface BusPowerManager;
 }
-implementation {
-  
-  command error_t SplitControl.start() {
-    call Power.makeOutput();
-    call Power.set();
-
-    call TemphumSplit.start(); 
-    call LightSplit.start();
-    call PressureSplit.start();
-    call Timer.startOneShot(15);//sht21 boot-up time is the slowest
-    return SUCCESS;
-  }
-  
-  event void Timer.fired(){
-    signal SplitControl.startDone(SUCCESS);
-  }
-  
-  task void stopDone(){
-    signal SplitControl.stopDone(SUCCESS);
-  }  
-
-  command error_t SplitControl.stop() {
-    call Timer.stop();
-    call Power.makeOutput();
-    call Power.clr();
-    post stopDone();
-    return SUCCESS;
-  }
-  
-  event void TemphumSplit.startDone(error_t error) {}  
-  event void LightSplit.startDone(error_t error) {}
-  event void PressureSplit.startDone(error_t error) {}
-  event void TemphumSplit.stopDone(error_t error) {}
-  event void LightSplit.stopDone(error_t error) {}
-  event void PressureSplit.stopDone(error_t error) {}  
-  default event void SplitControl.startDone(error_t error) { }
-  default event void SplitControl.stopDone(error_t error) { }
+implementation{
+  components AtmegaGeneralIOC as IO, new BusPowerManagerC(TRUE, FALSE);
+  #if UCMINI_REV == 49
+    BusPowerManagerC.GeneralIO->IO.PortF2;
+  #else
+    BusPowerManagerC.GeneralIO->IO.PortF1;
+  #endif
+  BusPowerManager=BusPowerManagerC;
 }

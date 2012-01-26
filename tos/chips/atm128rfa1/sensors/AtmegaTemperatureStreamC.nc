@@ -1,5 +1,4 @@
-/*
- * Copyright (c) 2011, University of Szeged
+/* Copyright (c) 2007 Johns Hopkins University.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -12,7 +11,7 @@
  *   notice, this list of conditions and the following disclaimer in the
  *   documentation and/or other materials provided with the
  *   distribution.
- * - Neither the name of the copyright holder nor the names of
+ * - Neither the name of the copyright holders nor the names of
  *   its contributors may be used to endorse or promote products derived
  *   from this software without specific prior written permission.
  *
@@ -29,16 +28,21 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * Author: Zsolt Szabo
+ * @author Razvan Musaloiu-E.
  */
 
-generic configuration ITempC() {
-  provides interface Read<uint16_t>;
+/**
+ * Battery Temperature. The returned value represents the difference
+ * between the battery voltage and V_BG (1.23V). The formula to convert
+ * it to mV is: 1223 * 1024 / value.
+ */
+
+generic configuration AtmegaTemperatureStreamC() {
+  provides interface ReadStream<uint16_t>;
 }
 implementation {
-  components new AdcReadClientC();
-  Read = AdcReadClientC;
+  components new AdcReadStreamClientC(), AtmegaTemperatureP;
 
-  components ITempP;
-  AdcReadClientC.Atm128AdcConfig -> ITempP;
+  ReadStream = AdcReadStreamClientC;
+  AdcReadStreamClientC.Atm128AdcConfig -> AtmegaTemperatureP;
 }

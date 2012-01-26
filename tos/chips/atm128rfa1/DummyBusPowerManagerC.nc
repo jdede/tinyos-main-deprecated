@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2010, University of Szeged
+* Copyright (c) 2011, University of Szeged
 * All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
@@ -29,26 +29,14 @@
 * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 * OF THE POSSIBILITY OF SUCH DAMAGE.
 *
-* Author: Zsolt Szabo
+* Author: Andras Biro
 */
-configuration I2CBusC {
-  provides interface SplitControl as BusControl;
+
+generic module DummyBusPowerManagerC(){
+	provides interface BusPowerManager;
 }
 implementation {
-  components HplAtm128GeneralIOC, I2CBusP;
-  components HplAtm128GeneralIOC as IO;
-
-  BusControl = I2CBusP.SplitControl;
-
-#if UCMINI_REV == 49
-  I2CBusP.Power -> IO.PortF2;
-#else
-  I2CBusP.Power -> IO.PortF1;
-#endif
-
-  components Sht21C, Bh1750fviC, new Ms5607C(FALSE), new TimerMilliC();
-  I2CBusP.TemphumSplit -> Sht21C.SplitControl;
-  I2CBusP.LightSplit   -> Bh1750fviC.SplitControl;
-  I2CBusP.PressureSplit-> Ms5607C.SplitControl;
-  I2CBusP.Timer->TimerMilliC;
+	command void BusPowerManager.configure(uint16_t startup, uint16_t keepalive) {}
+	command void BusPowerManager.requestPower() { signal BusPowerManager.powerOn(); }
+	command void BusPowerManager.releasePower() {}
 }

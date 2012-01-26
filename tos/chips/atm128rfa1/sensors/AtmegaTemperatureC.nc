@@ -1,5 +1,4 @@
-/*
- * Copyright (c) 2011, University of Szeged
+/* Copyright (c) 2007 Johns Hopkins University.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -12,7 +11,7 @@
  *   notice, this list of conditions and the following disclaimer in the
  *   documentation and/or other materials provided with the
  *   distribution.
- * - Neither the name of the copyright holder nor the names of
+ * - Neither the name of the copyright holders nor the names of
  *   its contributors may be used to endorse or promote products derived
  *   from this software without specific prior written permission.
  *
@@ -29,20 +28,15 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * Author: Zsolt Szabo
+ * @author Razvan Musaloiu-E.
  */
 
-configuration HplMs5607C {
-  provides interface I2CPacket<TI2CBasicAddr> ;
-  provides interface Resource;
-  provides interface BusPowerManager;
+generic configuration AtmegaTemperatureC() {
+  provides interface Read<uint16_t>;
 }
 implementation {
-  
-  components new Atm128I2CMasterC() as I2CBus;
-  
-  I2CPacket = I2CBus.I2CPacket;
-  Resource  = I2CBus.Resource;
-  components I2CBusPowerManagerC; //new DummyBusPowerManagerC();
-  BusPowerManager = I2CBusPowerManagerC;
+  components new AdcReadClientC(), AtmegaTemperatureP;
+
+  Read = AdcReadClientC;
+  AdcReadClientC.Atm128AdcConfig -> AtmegaTemperatureP;
 }

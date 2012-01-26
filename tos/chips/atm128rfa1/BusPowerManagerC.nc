@@ -29,14 +29,23 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * Author: Zsolt Szabo
+ * Author: Miklos Maroti
  */
 
-generic configuration InternalTempStreamC() {
-  provides interface Readstream<uint16_t>;
+generic configuration BusPowerManagerC(bool highIsOn, bool initPin)
+{
+	provides interface BusPowerManager;
+	uses interface GeneralIO;
 }
-implementation {
-  components TempDeviceP, new AdcReadStreamClientC();
 
-  AdcReadStreamClientC.Atm128AdcConfig -> TempDeviceP;
+implementation
+{
+ 	components new BusPowerManagerP(highIsOn, initPin), new TimerMilliC(), RealMainP, LedsC, DiagMsgC;
+
+	BusPowerManager = BusPowerManagerP;
+	GeneralIO = BusPowerManagerP;
+	BusPowerManagerP.Timer -> TimerMilliC;
+	BusPowerManagerP.Init <- RealMainP.PlatformInit;
+	BusPowerManagerP.Leds -> LedsC;
+	BusPowerManagerP.DiagMsg -> DiagMsgC;
 }

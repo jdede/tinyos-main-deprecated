@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2010, University of Szeged
+* Copyright (c) 2011, University of Szeged
 * All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
@@ -32,24 +32,20 @@
 * Author: Zsolt Szabo
 */
 
-configuration Sht21DriverC {
-  provides interface Read<uint16_t> as Temperature;
-  provides interface Read<uint16_t> as Humidity;
-  provides interface SplitControl;
+
+configuration HplAtm128rfa1Usart0SpiC {
+  provides interface Atm128Spi as SpiBus;
 }
 implementation {
-  components Sht21DriverP;
-  components new TimerMilliC();
-  
-  Temperature = Sht21DriverP.Temperature;
-  Humidity    = Sht21DriverP.Humidity;
+  components AtmegaGeneralIOC as IO, HplAtm128rfa1Usart0SpiP, HplBma180C, new NoPinC();
+  components McuSleepC;
 
-  Sht21DriverP.Timer -> TimerMilliC;
-  
-  components HplSht21C;
-  Sht21DriverP.I2CPacket -> HplSht21C;
-  Sht21DriverP.I2CResource -> HplSht21C.Resource;
+  SpiBus = HplAtm128rfa1Usart0SpiP;
 
-  SplitControl = Sht21DriverP;
-
+  HplAtm128rfa1Usart0SpiP.Mcu  -> McuSleepC;
+  HplAtm128rfa1Usart0SpiP.McuPowerOverride <- McuSleepC;
+  HplAtm128rfa1Usart0SpiP.SS   -> NoPinC;
+  HplAtm128rfa1Usart0SpiP.SCK  -> IO.PortE2;
+  HplAtm128rfa1Usart0SpiP.MOSI -> IO.PortE1;
+  HplAtm128rfa1Usart0SpiP.MISO -> IO.PortE0;
 }

@@ -32,21 +32,13 @@
  * Author: Zsolt Szabo
  */
 
-#include "Atm128Adc.h"
-
-module TempP {
-  provides interface Atm128AdcConfig;
+generic configuration DemoSensorNowC() {
+  provides interface Resource;
+  provides interface ReadNow<uint16_t>;
 }
 implementation {
-  async command uint8_t Atm128AdcConfig.getChannel() {
-    return ATM128_ADC_INT_TEMP;
-  }
+  components new AtmegaVoltageNowC() as DemoSensorC;
 
-  async command uint8_t Atm128AdcConfig.getRefVoltage() {
-    return ATM128_ADC_VREF_1_6;
-  }
-
-  async command uint8_t Atm128AdcConfig.getPrescaler() {
-    return ATM128_ADC_PRESCALE_32;
-  }
+  Resource = DemoSensorC;
+  ReadNow = DemoSensorC; 
 }

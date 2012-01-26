@@ -1,6 +1,5 @@
 /*
- * Copyright (c) 2011, University of Szeged
- * All rights reserved.
+ * Copyright (c) 2004-2005 Crossbow Technology, Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -12,7 +11,7 @@
  *   notice, this list of conditions and the following disclaimer in the
  *   documentation and/or other materials provided with the
  *   distribution.
- * - Neither the name of the copyright holder nor the names of
+ * - Neither the name of Crossbow Technology nor the names of
  *   its contributors may be used to endorse or promote products derived
  *   from this software without specific prior written permission.
  *
@@ -29,22 +28,31 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * Author: Zsolt Szabo
+ * @author Martin Turon <mturon@xbow.com>
+ * @author David Gay <dgay@intel-research.net>
+ * @author Miklos Maroti
  */
 
-module ITempP {
-  provides interface Atm128AdcConfig;
+generic module AtmegaGeneralIOP(uint8_t port_addr, 
+				uint8_t ddr_addr, 
+				uint8_t pin_addr) @safe()
+{
+	provides interface GeneralIO as Pin[uint8_t bit];
 }
-implementation {
-  async command uint8_t Atm128AdcConfig.getChannel() {
-    return ATM128_ADC_INT_TEMP;
-  }
 
-  async command uint8_t Atm128AdcConfig.getRefVoltage() {
-    return ATM128_ADC_VREF_1_6;
-  }
+implementation
+{
+#define pin (*TCAST(volatile uint8_t * ONE, pin_addr))
+#define port (*TCAST(volatile uint8_t * ONE, port_addr))
+#define ddr (*TCAST(volatile uint8_t * ONE, ddr_addr))
 
-  async command uint8_t Atm128AdcConfig.getPrescaler() {
-    return ATM128_ADC_PRESCALE_64;
-  }
+	inline async command bool Pin.get[uint8_t bit]() { return (pin & (1<<bit)) != 0; }
+	inline async command void Pin.set[uint8_t bit]() { port |= 1<<bit; }
+	inline async command void Pin.clr[uint8_t bit]() { port &= ~(1<<bit); }
+	inline async command void Pin.toggle[uint8_t bit]() { atomic port ^= 1 <<bit; }
+
+	inline async command void Pin.makeInput[uint8_t bit]() { ddr &= ~(1<<bit); }
+	inline async command bool Pin.isInput[uint8_t bit]() { return (ddr & (1<<bit)) == 0; }
+	inline async command void Pin.makeOutput[uint8_t bit]() { ddr |= 1<<bit; }
+	inline async command bool Pin.isOutput[uint8_t bit]() { return (ddr & (1<<bit)) != 0;}
 }
