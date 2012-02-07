@@ -68,7 +68,7 @@ implementation{
 
   /* Which metrics does this implementation support */
   command bool RPLOF.objectSupported(uint16_t objectType) {
-    if (objectType == RPLOF_OPTION_SOLICITATION) {
+    if (objectType == RPL_ROUTE_METRIC_ETX) {
       return TRUE;
     }
 
@@ -94,7 +94,7 @@ implementation{
     return nodeRank;
   }
 
-  command bool RPLOF.recalcualateRank() {
+  command bool RPLOF.recalculateRank() {
     uint16_t prevEtx, prevRank;
     parent_t* parentNode = call ParentTable.get(desiredParent);
 
