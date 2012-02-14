@@ -322,7 +322,6 @@ implementation {
     uint8_t indexset;
     uint16_t tempEtx_hop;
 
-    dbg("RPLRank","RPLRank: insert parent.parentIP = %u\n", (uint8_t)htons(&parent.parentIP.s6_addr16[7]));
     indexset = getPreExistingParent(&parent.parentIP);
 
     printf("RPL: Insert Node: %d \n", indexset);
@@ -981,7 +980,6 @@ implementation {
                          size_t len, struct ip6_metadata *meta) { 
     struct dio_base_t *dio;
     struct in6_addr ADDR_MY_IP;
-    int i;
     dio = (struct dio_base_t *) payload;
     call IPAddress.getGlobalAddr(&ADDR_MY_IP);
     dbg("RPLRank","RPLRank:IP_DIO.recv: MY_IP = ");

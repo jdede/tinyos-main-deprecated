@@ -93,6 +93,7 @@ module ICMPCoreP {
       reply.ip6_hdr.ip6_nxt = IANA_ICMP;
       reply.ip6_data = &v;
 
+
       reply.ip6_hdr.ip6_plen = htons(len);
       call ICMP_IP.send[ICMP_TYPE_ECHO_REPLY](&reply);
       break;

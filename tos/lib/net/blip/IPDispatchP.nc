@@ -479,7 +479,6 @@ void SENDINFO_DECR(struct send_info *si) {
     call FragPool.put(s_entry->msg);
     call SendEntryPool.put(s_entry);
     call SendQueue.dequeue();
-    ip_free(s_entry->frame_addr);
   }
   
 
@@ -500,7 +499,6 @@ void SENDINFO_DECR(struct send_info *si) {
     struct lowpan_ctx ctx;
     struct send_info  *s_info;
     struct send_entry *s_entry;
-    struct ieee154_frame_addr *s_fa;
 
     message_t *outgoing;
 
@@ -634,7 +632,6 @@ void SENDINFO_DECR(struct send_info *si) {
     call FragPool.put(s_entry->msg);
     call SendEntryPool.put(s_entry);
     call SendQueue.dequeue();
-    ip_free(s_entry->frame_addr);
 
     post sendTask();
   }

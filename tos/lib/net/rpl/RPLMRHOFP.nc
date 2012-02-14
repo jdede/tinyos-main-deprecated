@@ -160,8 +160,6 @@ implementation{
     uint8_t min = 0;
     uint16_t minDesired;
     parent_t* parentNode, *previousParent;
-    parent_t* print_parentNode;
-    int i;
     //choose the first valid
 
     parentNode = call ParentTable.get(min);
