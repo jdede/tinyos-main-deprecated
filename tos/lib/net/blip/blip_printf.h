@@ -75,6 +75,8 @@ int printf_ieee154addr(ieee154_addr_t *in) {
 #define printf_buf(buf, len) ;
 #define iov_print(iov) ;
 #else
+/* disable all printfs by removing them in the preprocessor */
+
 #define printf(fmt, args ...) ;
 #define printfflush() ;
 #define printf_in6addr(a) ;
@@ -92,13 +94,6 @@ int printf_ieee154addr(ieee154_addr_t *in) {
 #endif
 #endif
 #undef putchar
-
-/* disable all printfs by removing them in the preprocessor */
-#define printf(fmt, args ...) ;
-#define printfflush() ;
-#define printf_in6addr(a) ;
-#define printf_buf(buf, len) ;
-#define iov_print(iov) ;
 
 #endif /* PRINTFUART_ENABLED */
 

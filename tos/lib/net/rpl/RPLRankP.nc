@@ -865,7 +865,6 @@ implementation {
 	    insertParent(tempParent);
             dbg("RPLRank","RPLRank: RecomputeRoutes4\n");
 	    call RPLOF.recomputeRoutes();
-printf_dbg("Status Rank:99 %i vor Reset \n",call RPLRankInfo.getRank(&ADDR_MY_IP));
 	    getNewRank();
 	  } else {
 	    // I have a better node in the current DODAG so I am not moving!
@@ -996,9 +995,6 @@ printf_dbg("Status Rank:99 %i vor Reset \n",call RPLRankInfo.getRank(&ADDR_MY_IP
     // evict parent if the node is advertizing 0xFFFF;
     if (dio->dagRank == 0xFFFF && getParent(&iph->ip6_src) != MAX_PARENT)
       evictParent(getParent(&iph->ip6_src));
-    }
-    printf_dbg("Status vor DAG akzeptiert 2 in RankP Jetzt Rank: %i \n",
-               call RPLRankInfo.getRank(&ADDR_MY_IP));
 
     // leafState = FALSE;
     if (nodeRank > dio->dagRank || dio->dagRank == INFINITE_RANK) {

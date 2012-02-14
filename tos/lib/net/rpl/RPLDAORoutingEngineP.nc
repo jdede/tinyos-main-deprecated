@@ -83,6 +83,14 @@ generic module RPLDAORoutingEngineP() {
   uint8_t downwards_table_count = 0;
   bool m_running = FALSE;
 
+ void memcpy_rpl(uint8_t* a, uint8_t* b, uint8_t len){
+    //memcpy(a, b, len);
+    uint8_t i;
+    for (i = 0 ; i < len ; i++)
+      a[i] = b[i];
+
+  }
+
   bool memcmp_rpl(uint8_t* a, uint8_t* b, uint8_t len) {
     uint8_t i;
     for (i = 0 ; i < len ; i++)
@@ -131,8 +139,9 @@ generic module RPLDAORoutingEngineP() {
         call SendPool.put(dao_msg);
         printf("RPL: DAO: sendDAO: no default route\n");
         return;
-      memcpy(&dao_msg->s_pkt.ip6_hdr.ip6_dst, &next_hop, sizeof(struct in6_addr));      
-#else 
+      }
+      memcpy(&dao_msg->s_pkt.ip6_hdr.ip6_dst, &next_hop, sizeof(struct in6_addr));
+#else
       /* in non-storing mode we must use global addresses */
       call IPAddress.getGlobalAddr(&dao_msg->s_pkt.ip6_hdr.ip6_src);
       /* and unicast to the DODAG root */
@@ -256,10 +265,6 @@ generic module RPLDAORoutingEngineP() {
     
     dbg("DAORouting","DAO: copying target_prefix to memory\n");
     
-    memcpy(&dao_msg->dao_base.target_option.target_prefix, &MY_ADDR, sizeof(struct in6_addr));
- 
-    dbg("DAORouting","DAO: finish copying MY_ADDR %u into memory\n",htons(MY_ADDR.s6_addr16[7]));
-    
     dao_msg->dao_base.transit_info_option.type = RPL_TRANSIT_INFORMATION_TYPE;
     dao_msg->dao_base.transit_info_option.option_length = 22;
     dao_msg->dao_base.transit_info_option.path_sequence = PATH_SEQUENCE;
@@ -375,7 +380,6 @@ generic module RPLDAORoutingEngineP() {
 						  &iph->ip6_src,
 						  RPL_IFACE);
         }
-      }
     } else {
       /* new prefix */
 

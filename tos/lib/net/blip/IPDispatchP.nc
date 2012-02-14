@@ -62,6 +62,7 @@ module IPDispatchP {
     /* context lookup */
     interface NeighborDiscovery;
 
+    interface ReadLqi;
     interface PacketLink;
     interface LowPowerListening;
 

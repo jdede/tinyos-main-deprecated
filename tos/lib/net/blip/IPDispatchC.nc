@@ -42,6 +42,7 @@ configuration IPDispatchC {
   components IPDispatchP;
 
   components Ieee154MessageC as MessageC;
+  components ReadLqiC;
 
   components new TimerMilliC();
 
@@ -68,6 +69,7 @@ configuration IPDispatchC {
   MainC.SoftwareInit -> IPDispatchP.Init;
 
   IPDispatchP.PacketLink -> MessageC;
+  IPDispatchP.ReadLqi -> ReadLqiC;
   IPDispatchP.Leds -> LedsC;
   IPDispatchP.ExpireTimer -> TimerMilliC;
 
