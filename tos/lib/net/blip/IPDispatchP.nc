@@ -62,7 +62,7 @@ module IPDispatchP {
     /* context lookup */
     interface NeighborDiscovery;
 
-    interface ReadLqi;
+//    interface ReadLqi;
     interface PacketLink;
     interface LowPowerListening;
 
@@ -369,10 +369,12 @@ void SENDINFO_DECR(struct send_info *si) {
 
       /* fill in metadata: on fragmented packets, it applies to the
          first fragment only  */
-      memcpy(&recon->r_meta.sender, &frame_address.ieee_src,
-             sizeof(ieee154_addr_t));
-      recon->r_meta.lqi = call ReadLqi.readLqi(msg);
-      recon->r_meta.rssi = call ReadLqi.readRssi(msg);
+// jd: not working in simulation
+// #TODO: Check? ifdef?
+//      memcpy(&recon->r_meta.sender, &frame_address.ieee_src,
+//             sizeof(ieee154_addr_t));
+//      recon->r_meta.lqi = call ReadLqi.readLqi(msg);
+//      recon->r_meta.rssi = call ReadLqi.readRssi(msg);
 
       if (hasFrag1Header(&lowmsg)) {
         if (recon->r_buf != NULL) goto fail;
@@ -403,8 +405,10 @@ void SENDINFO_DECR(struct send_info *si) {
       /* fill in metadata */
       memcpy(&recon.r_meta.sender, &frame_address.ieee_src, 
              sizeof(ieee154_addr_t));
-      recon.r_meta.lqi = call ReadLqi.readLqi(msg);
-      recon.r_meta.rssi = call ReadLqi.readRssi(msg);
+// jd: not working in simulation at present
+// #TODO: Check! Ifdef?
+//      recon.r_meta.lqi = call ReadLqi.readLqi(msg);
+//      recon.r_meta.rssi = call ReadLqi.readRssi(msg);
 
       buf = getLowpanPayload(&lowmsg);
       if ((rv = lowpan_recon_start(&frame_address, &recon, buf, len)) < 0) {
@@ -529,10 +533,8 @@ void SENDINFO_DECR(struct send_info *si) {
       outgoing = call FragPool.get();
 
       if (s_entry == NULL || outgoing == NULL) {
-        if (s_entry != NULL) {
-          dbg("Driver.debug", "IPDispatchP: IPLower.send SendEntryPool.put()\n");
+        if (s_entry != NULL)
           call SendEntryPool.put(s_entry);
-        }
         if (outgoing != NULL)
           call FragPool.put(outgoing);
         // this will cause any fragments we have already enqueued to
@@ -569,26 +571,9 @@ void SENDINFO_DECR(struct send_info *si) {
         goto done;
       }
 
-      dbg("Driver.debug", "IPDispatchP: IPLower.send %x %x\n",
-          s_entry->frame_addr, frame_addr);
-
       s_info->link_fragments++;
       s_entry->msg = outgoing;
       s_entry->info = s_info;
-
-      dbg("Driver.debug", "IPDispatchP: msg %x\n",
-          s_entry->msg);
-
-      s_fa = (struct ieee154_frame_addr *)ip_malloc(sizeof(struct ieee154_frame_addr));
-
-      memcpy(&(s_fa->ieee_dst), &(frame_addr->ieee_dst), sizeof(ieee154_addr_t));
-      memcpy(&(s_fa->ieee_src), &(frame_addr->ieee_src), sizeof(ieee154_addr_t));
-      memcpy(&(s_fa->ieee_dstpan), &(frame_addr->ieee_dstpan), sizeof(ieee154_panid_t));
-
-      s_entry->frame_addr = s_fa;
-      dbg("Driver.debug", "IPDispatchP: IPLower.send dest %hu\n", s_entry->frame_addr->ieee_dst.i_saddr);
-      dbg("Driver.debug", "IPDispatchP: IPLower.send src %hu\n", s_entry->frame_addr->ieee_src.i_saddr);
-      dbg("Driver.debug", "IPDispatchP: IPLower.send dest mode %hu\n", s_entry->frame_addr->ieee_dst.ieee_mode);
 
       /* configure the L2 */
       if (frame_addr->ieee_dst.ieee_mode == IEEE154_ADDR_SHORT &&
