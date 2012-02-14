@@ -52,10 +52,8 @@ configuration CC2420XRadioC
 
 		interface PacketAcknowledgements;
 		interface LowPowerListening;
-
-#ifdef PACKET_LINK
 		interface PacketLink;
-#endif
+
 #ifdef TRAFFIC_MONITOR
 		interface TrafficMonitor;
 #endif
@@ -168,13 +166,9 @@ implementation
 
 // -------- Packet Link
 
-#ifdef PACKET_LINK
 	components new PacketLinkLayerC();
 	PacketLink = PacketLinkLayerC;
 	PacketLinkLayerC.PacketAcknowledgements -> SoftwareAckLayerC;
-#else
-	components new DummyLayerC() as PacketLinkLayerC;
-#endif
 	PacketLinkLayerC -> LowPowerListeningLayerC.Send;
 	PacketLinkLayerC -> LowPowerListeningLayerC.Receive;
 	PacketLinkLayerC -> LowPowerListeningLayerC.RadioPacket;

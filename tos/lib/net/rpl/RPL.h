@@ -66,7 +66,7 @@
  */
 
 /**
- * @ author Yiwei Yao <yaoyiwei@stanford.edu>
+ * @author Yiwei Yao <yaoyiwei@stanford.edu>
  */
 
 #ifndef RPL_H
@@ -74,23 +74,28 @@
 
 #include <iprouting.h>
 
+/* SDH : NB : make sure divideRank * BLIP_L2_RETRIES does not
+    overflow a uint16_t */
+/* SDH : Default eviction threshold set to an etx of "3" -- these are
+   pretty bad links. */
+/* SDH : the aging parameter \alpha for the link estimator is
+   currently hard-coded in RPLRankP.nc.  Last I checked, it was set to
+   0.8. */
 #ifndef RPL_OF_MRHOF
-
-#define ETX_THRESHOLD 25600 //25600
+// Threshold at which to evict parent
 #define minHopRankIncrease 1
-#define divideRank 128 //128
-#define INIT_ETX 448 //448
-
-#else
-
-#define ETX_THRESHOLD 25600
+// Divisor for the metric (for fixed-point repr)
+#define divideRank 10 
+#define INIT_ETX divideRank 
+#define ETX_THRESHOLD (3 * divideRank)
+#else //  MRHOF
 #define minHopRankIncrease 128
 #define divideRank 128
-#define INIT_ETX 448
-
+#define INIT_ETX divideRank //448
+#define ETX_THRESHOLD (3 * divideRank)
 #endif // MRHOF
 
-#define MAX_PARENT 20 
+#define MAX_PARENT 20
 #define MAX_HOPCOUNT 30
 #define RPL_QUEUE_SIZE 5
 #define RPL_MAX_SOURCEROUTE 10
@@ -105,6 +110,16 @@ enum {
   RPL_MOP_No_Storing = 1,
   RPL_MOP_Storing_No_Multicast = 2,
   RPL_MOP_Storing_With_Multicast = 3,
+
+  RPL_DIO_TYPE_METRIC = 2,
+  RPL_DIO_TYPE_ROUTING = 3,
+  RPL_DIO_TYPE_DODAG = 4,
+  RPL_DIO_TYPE_PREFIX = 8,
+
+  RPL_ROUTE_METRIC_ETX = 7,
+
+  RPLOF_OCP_OF0 = 0,
+  RPLOF_OCP_MRHOF = 1,
 };
 
 enum {
@@ -116,11 +131,11 @@ struct icmpv6_header_t {
   uint8_t	type;
   uint8_t	code;
   nx_uint16_t	checksum;
-};
+}__attribute__((packed));
 
 struct dis_base_t {
   struct icmpv6_header_t icmpv6;
-  uint16_t reserved;
+  nx_uint16_t reserved;
 };
 
 struct rpl_instance_id {
@@ -129,7 +144,7 @@ struct rpl_instance_id {
   uint8_t id        : 7;
   */
   uint8_t id;
-};
+}__attribute__((packed));
 
 struct transit_info_option_t {
   uint8_t type;
@@ -153,33 +168,24 @@ struct dao_base_t {
   struct rpl_instance_id instance_id; // used to be RPLinstanceID
   uint16_t k_bit : 1;
   uint16_t d_bit : 1;
-  uint16_t reserved : 14;
+  uint16_t flags : 6;
+  uint16_t reserved : 8;
   uint8_t DAOsequence;
   struct in6_addr dodagID;
   struct target_option_t target_option;
   struct transit_info_option_t transit_info_option;
-};
+}__attribute__((packed));
 
 struct dio_base_t {
   struct icmpv6_header_t icmpv6;
   struct rpl_instance_id instance_id; // used to be instanceID
   nx_uint8_t version; //used to be sequence
   nx_uint16_t dagRank;
-  union{
-    /*
-    struct flags_t {
-      uint8_t grounded        :1;
-      uint8_t reserved        :1;
-      uint8_t mop             :3; // mode of operation // flag changes
-      uint8_t dag_preference  :3;
-    } __attribute__((packed)) flags_element;
-    */
-    uint8_t flags_chunk;
-  } flags;
+  uint8_t flags;
   uint8_t dtsn;
-  uint16_t reserved2;
+  nx_uint16_t reserved;
   struct in6_addr dodagID; // was dagID
-};
+}__attribute__((packed));
 
 struct dio_body_t{ // type 2 ; contains metrics
   uint8_t type;
@@ -254,8 +260,7 @@ enum {
   RPL_DEFAULT_INSTANCE = 0,
   NUMBER_OF_PARENTS = 10,
   DIS_INTERVAL = 3*1024U,
-  // DEFAULT_LIFETIME = 1024L * 60 * 20, // 20 mins
-  DEFAULT_LIFETIME = 1024L * 60 * 120, // set by bo for simulation, was 20 mins
+  DEFAULT_LIFETIME = 1024L * 60 * 20, // 20 mins
 };
 
 /*RFC defined parameters*/
@@ -286,7 +291,7 @@ enum {
   DIO_BASE_OPT_DAG_TIMER_CONFIG = 4,
 };
 
-///////////////////////// for forwarding engine ////////////////////////////////////////////////////////////
+///////////////////////// for forwarding engine //////////////////////////////
 
 typedef struct {
   struct in6_addr next_hop;
@@ -340,12 +345,6 @@ nx_struct nx_ip6_ext {
 typedef nx_struct {
   nx_struct nx_ip6_ext ip6_ext_outer;
   nx_struct nx_ip6_ext ip6_ext_inner;
-  /*
-  uint8_t o_bit  : 1;
-  uint8_t r_bit  : 1;
-  uint8_t f_bit  : 1;
-  uint8_t reserved : 5;
-  */
   nx_uint8_t bitflag;
   // nx_struct rpl_instance_id instance_id; // used to be instanceID 
   nx_uint8_t instance_id;
@@ -359,9 +358,9 @@ typedef nx_struct {
 #define RPL_DATA_F_BIT_MASK 0x20
 #define RPL_DATA_F_BIT_SHIFT 5
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
 
-/////////////////////// for rank component /////////////////////////////////////////////////////////////////
+/////////////////////// for rank component ///////////////////////////////////
 
 typedef struct {
   struct in6_addr parentIP;
@@ -379,17 +378,6 @@ struct dio_dest_prefix_t {
   uint16_t length;
   uint8_t* data;
 };
-
-/*
-struct padN_t{
-  uint8_t type;
-  uint16_t padN_len;
-  uint8_t *padN_data;
-};
-*/
-
-//parent_t parentSet[MAX_PARENT];
-//uint16_t desiredParent = MAX_PARENT;
 
 #define DIO_GROUNDED_MASK 0x80
 #define DIO_MOP_MASK 0x3c

@@ -29,9 +29,8 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifdef COAP_RESOURCE_KEY
+
 #include "StorageVolumes.h"
-#endif
 #include <lib6lowpan/6lowpan.h>
 #include "tinyos_coap_resources.h"
 
@@ -51,11 +50,10 @@ configuration CoapBlipC {
   CoapBlipP.Leds -> LedsC;
   CoapBlipP.RadioControl ->  IPStackC;
   CoapBlipP.Init <- MainC.SoftwareInit;
-  CoapBlipP.ForwardingTableEvents -> IPStackC.ForwardingTableEvents;
 
-#ifdef TOSSIM
 #ifdef RPL_ROUTING
   components RPLRoutingC;
+#ifdef TOSSIM
   CoapBlipP.RootControl -> RPLRoutingC;
 #endif
 #endif
@@ -92,6 +90,7 @@ configuration CoapBlipC {
 #if defined (COAP_RESOURCE_VOLT)  || defined (COAP_RESOURCE_ALL)
   components new VoltageC() as VoltSensor;
 #endif
+
 #ifdef COAP_RESOURCE_VOLT
   components new CoapReadResourceC(uint16_t, KEY_VOLT) as CoapReadVoltResource;
   components new CoapBufferVoltTranslateC() as CoapBufferVoltTranslate;
@@ -123,6 +122,7 @@ configuration CoapBlipC {
   CoapBufferVoltTranslateAll.Read -> VoltSensor.Read;
   CoapUdpServerC.ReadResource[KEY_ALL] -> CoapReadAllResource.ReadResource;
 #endif
+
 #ifdef COAP_RESOURCE_KEY
   components new CoapFlashResourceC(KEY_KEY) as CoapFlashResource;
   components new ConfigStorageC(VOLUME_CONFIGKEY);
@@ -142,27 +142,20 @@ configuration CoapBlipC {
 #ifdef COAP_CLIENT_ENABLED
   components CoapUdpClientC;
   components new UdpSocketC() as UdpClientSocket;
-#ifdef COAP_CLIENT_SEND_RI
-  components new CoapRouteResourceC(uint16_t, KEY_ROUTE_CLIENT) as CoapClientReadRouteResource;
-  CoapBlipP.ReadResource[KEY_ROUTE_CLIENT] -> CoapClientReadRouteResource.ReadResource;
-  components new TimerMilliC();
-  CoapClientReadRouteResource.ForwardingTable -> IPStackC;
-  CoapBlipP.Timer -> TimerMilliC;
-#endif
+  CoapBlipP.CoAPClient -> CoapUdpClientC;
+  CoapUdpClientC.LibCoapClient -> LibCoapAdapterC.LibCoapClient;
+  CoapUdpClientC.Init <- MainC.SoftwareInit;
+  LibCoapAdapterC.UDPClient -> UdpClientSocket;
+  CoapBlipP.ForwardingTableEvents -> IPStackC.ForwardingTableEvents;
 #ifdef TOSSIM
   components new TimerMilliC() as TimerSim;
   CoapBlipP.TimerSim -> TimerSim;
 #endif
 
-
-  CoapBlipP.CoAPClient -> CoapUdpClientC;
-  CoapUdpClientC.LibCoapClient -> LibCoapAdapterC.LibCoapClient;
-  CoapUdpClientC.Init <- MainC.SoftwareInit;
-  LibCoapAdapterC.UDPClient -> UdpClientSocket;
 #endif
 
 #ifdef PRINTFUART_ENABLED
-  components PrintfC;
-  components SerialStartC;
+    components PrintfC;
+    components SerialStartC;
 #endif
   }

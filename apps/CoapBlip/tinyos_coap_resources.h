@@ -75,9 +75,6 @@ enum {
 #ifdef COAP_RESOURCE_ROUTE
     KEY_ROUTE,
 #endif
-#ifdef COAP_CLIENT_SEND_RI
-    KEY_ROUTE_CLIENT,
-#endif
     COAP_NO_SUCH_RESOURCE = 0xff
 };
 

@@ -34,7 +34,10 @@ generic module CoapRouteResourceP(typedef val_t, uint8_t uri_key) {
   provides interface ReadResource;
   uses interface ForwardingTable;
 } implementation {
-  coap_tid_t id_t;
+
+  bool lock = FALSE;
+  coap_tid_t temp_id;
+
   struct {
     int ifindex;
     char *name;
@@ -62,7 +65,8 @@ generic module CoapRouteResourceP(typedef val_t, uint8_t uri_key) {
 
     entry = call ForwardingTable.getTable(&n);
     if (!buf || !entry) {
-      //       signal ReadResource.getDone(FAIL, id_t, 0, (uint8_t*)buf, cur - buf);
+      lock = FALSE;
+      signal ReadResource.getDone(FAIL, temp_id, 0, (uint8_t*)buf, cur - buf);
       return;
     }
 
@@ -78,18 +82,28 @@ generic module CoapRouteResourceP(typedef val_t, uint8_t uri_key) {
 	*cur++ = '\n';
       }
     }
-    if (cur > buf)//{
-      signal ReadResource.getDone(SUCCESS, id_t, 0,
+
+    if (cur > buf) {
+      lock = FALSE;
+      signal ReadResource.getDone(SUCCESS, temp_id, 0,
 				  (uint8_t*)buf, cur - buf);
-    //         } else {
-    //           signal ReadResource.getDone(SUCCESS, id_t, 0, (uint8_t*)"No Route", sizeof("No Route"));
-    //         }
+    }
+    // } else {
+    //   // no route available? -> don't send a packet
+    //   signal ReadResource.getDone(SUCCESS, id_t, 0, (uint8_t*)"No Route", sizeof("No Route"));
+    // }
 
   };
 
-  command error_t ReadResource.get(coap_tid_t id) {
-    id_t = id;
-    post getRoute();
-    return SUCCESS;
+  command int ReadResource.get(coap_tid_t id) {
+    if (lock == FALSE) {
+      lock = TRUE;
+
+      temp_id = id;
+      post getRoute();
+      return COAP_SPLITPHASE;
+    } else {
+      return COAP_RESPONSE_503;
+    }
   }
-  }
+}

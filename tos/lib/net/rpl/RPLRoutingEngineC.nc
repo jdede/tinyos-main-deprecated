@@ -33,7 +33,9 @@
  * RPLRoutingEngineC.nc
  * @ author JeongGil Ko (John) <jgko@cs.jhu.edu>
  */
+
 #include <RPL.h>
+#include <lib6lowpan/ip.h>
 
 configuration RPLRoutingEngineC{
   provides {
@@ -53,7 +55,7 @@ implementation{
   components LedsC, NoLedsC;
   components RPLRankC as RankC;
   components RPLDAORoutingEngineC;
-  components new ICMPCodeDispatchC(155) as ICMP_RS;
+  components new ICMPCodeDispatchC(ICMP_TYPE_RPL_CONTROL) as ICMP_RS;
   components RandomMlcgC;
 
   RootControl = Routing;

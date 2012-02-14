@@ -54,7 +54,22 @@ module CoapUdpClientP {
   }
 
   coap_pdu_t *
-    coap_new_request( method_t m, coap_list_t *options, uint8_t *buf, uint8_t buflen ) {
+  coap_new_ack(coap_pdu_t *pdu)
+  {
+    coap_pdu_t *ack = coap_new_pdu();
+
+    if (!ack)
+      return NULL;
+
+    ack->hdr->type = COAP_MESSAGE_ACK;
+    ack->hdr->id = pdu->hdr->id;
+    ack->hdr->code = 0;
+
+    return ack;
+  }
+
+  coap_pdu_t *
+  coap_new_request(method_t m, coap_list_t *options, uint16_t len, void *data) {
     coap_pdu_t *pdu;
     coap_list_t *opt;
 
@@ -71,23 +86,11 @@ module CoapUdpClientP {
 		       COAP_OPTION_DATA(*(coap_option *)opt->data) );
     }
 
-    // Add buffer value to the PDU
-    if (buflen) {
-      if (!coap_add_data(pdu, buflen, buf))
-	return NULL; //testing
-    }
+    if (len && data)
+      coap_add_data( pdu, len, data);
 
     return pdu;
   }
-
-  coap_pdu_t *new_ack( coap_context_t  *ctx, coap_queue_t *node ) {
-    coap_pdu_t *pdu;
-    //printf("** coap: new_ack\n");
-    GENERATE_PDU(pdu,COAP_MESSAGE_ACK,0,node->pdu->hdr->id);
-
-    return pdu;
-  }
-
 
   void message_handler(coap_context_t *ctx, coap_queue_t *node, void *data);
 
@@ -98,6 +101,7 @@ module CoapUdpClientP {
       return FAIL;
     }
     memset(ctx_client, 0, sizeof( coap_context_t ) );
+    ctx_client->tinyos_port = COAP_CLIENT_PORT;
     coap_register_message_handler( ctx_client, message_handler );
     return SUCCESS;
   }
@@ -105,47 +109,71 @@ module CoapUdpClientP {
   command error_t CoAPClient.request(struct sockaddr_in6 *dest,
 				     method_t method,
 				     coap_list_t *optlist,
-				     uint8_t *buf,
-				     uint8_t buflen) {
+				     uint16_t len,
+				     void * data) {
     coap_pdu_t *pdu;
 
-    if (! (pdu = coap_new_request(method, optlist, buf, buflen)))
-      return FALSE;
+    if (! (pdu = coap_new_request( method, optlist, len, data ) ) )
+      return FAIL;
 
-    dbg ("Coap", "CoAP: Send: Node %i is sending Message to Node = %X ... %X on Port = %i   \n",TOS_NODE_ID, ntohs(dest->sin6_addr.s6_addr16[0]), ntohs(dest->sin6_addr.s6_addr16[7]), ntohs(dest->sin6_port) );
-    call LibCoapClient.send(ctx_client, dest, pdu, 1);
+    if (call LibCoapClient.send(ctx_client, dest, pdu, 1) == COAP_INVALID_TID)
+    {
+        coap_delete_pdu (pdu);
+        return FAIL;
+    }
     return SUCCESS;
   };
 
+  command error_t CoAPClient.streamed_request(struct sockaddr_in6 *dest,
+					      method_t method,
+					      coap_list_t *optlist) {
+    // TODO: implement block'ed data transfer
+    return FAIL;
+  }
+
   void message_handler(coap_context_t *ctx, coap_queue_t *node, void *data) {
-    coap_pdu_t *pdu = NULL;
+    unsigned int len = 0;
+    unsigned char *payload = NULL;
+    bool more = FALSE;
+    uint8_t mediatype = COAP_MEDIATYPE_TEXT_PLAIN;
 
-
-    if ( node->pdu->hdr->version != COAP_DEFAULT_VERSION ) {
-      printf("dropped packet with unknown version %u\n", node->pdu->hdr->version);
+    if (node->pdu->hdr->version != COAP_DEFAULT_VERSION)
       return;
-    }
 
-    //     if ( node->pdu->hdr->code < COAP_RESPONSE_100 && node->pdu->hdr->type == COAP_MESSAGE_CON ) {
-    //       /* send 500 response */
-    //       pdu = new_response( ctx, node, COAP_RESPONSE_500 );
-    //       goto finish;
-    //     }
-
-    switch (node->pdu->hdr->code) {
-    case COAP_RESPONSE_200:
-      /* need to acknowledge if message was asyncronous */
-      if ( node->pdu->hdr->type == COAP_MESSAGE_CON ) {
-	pdu = new_ack( ctx, node );
-
-	if ( pdu && (call LibCoapClient.send(ctx, &node->remote, pdu, 1) == COAP_INVALID_TID) ) {
-	  printf("message_handler: error sending reponse");
-	  coap_delete_pdu(pdu);
-	  return;
-	}
+    if (node->pdu->hdr->type == COAP_MESSAGE_CON)
+    {
+      coap_pdu_t *ack = coap_new_ack(node->pdu);
+      // TODO: maybe move this to a separate task?
+      if (call LibCoapClient.send(ctx_client, &node->remote, ack, 1) ==
+          COAP_INVALID_TID)
+      {
+        coap_delete_pdu (ack);
       }
-
     }
+
+    if (node->pdu->hdr->code == COAP_RESPONSE_200)
+    {
+      coap_opt_t *ct, *block;
+
+      ct = coap_check_option (node->pdu, COAP_OPTION_CONTENT_TYPE);
+      if (ct)
+        mediatype = *COAP_OPT_VALUE(*ct);
+
+      block = coap_check_option (node->pdu, COAP_OPTION_BLOCK);
+      if (!block)
+      {
+        if (!coap_get_data (node->pdu, &len, &payload))
+          return;
+      }
+      else
+      {
+         // TODO: implement requesting of next response block
+        return;
+      }
+    }
+    if (node->pdu->hdr->code != 0)
+      signal CoAPClient.request_done (
+        node->pdu->hdr->code, mediatype, (uint16_t)len, data, more);
   }
 
   event void LibCoapClient.read(struct sockaddr_in6 *from, void *data,
@@ -153,4 +181,9 @@ module CoapUdpClientP {
     coap_read(ctx_client, from, data, len, meta);
     coap_dispatch(ctx_client);
   }
+
+  default event void CoAPClient.request_done (
+        uint8_t code, uint8_t mediatype, uint16_t len, void *data, bool more)
+  {
   }
+}

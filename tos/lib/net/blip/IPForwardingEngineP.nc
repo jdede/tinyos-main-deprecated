@@ -28,6 +28,7 @@ module IPForwardingEngineP {
     interface IPForward[uint8_t ifindex];
     interface IPAddress;
     interface IPPacket;
+    interface Pool<struct in6_iid>;
 
 #if defined PRINTFUART_ENABLED  || defined (TOSSIM)
     interface Timer<TMilli> as PrintTimer;
@@ -53,6 +54,18 @@ module IPForwardingEngineP {
     memset(routing_table, 0, sizeof(routing_table));
   }
 
+  int alloc_key() {
+    int i;
+    int key;
+  retry:
+    key = last_key++;
+    for (i = 0; i < ROUTE_TABLE_SZ; i++) {
+      if (routing_table[i].valid && routing_table[i].key == key)
+        goto retry;
+    }
+    return key;
+  }
+
   struct route_entry *alloc_entry(int pfxlen) {
     int i;
     /* full table */
@@ -76,7 +89,7 @@ module IPForwardingEngineP {
     return NULL;
   init_entry:
     routing_table[i].valid = 1;
-    routing_table[i].key = ++last_key;
+    routing_table[i].key = alloc_key();
     return &routing_table[i];
   }
 
@@ -112,55 +125,27 @@ module IPForwardingEngineP {
     }
     if (entry == NULL) 
       return ROUTE_INVAL_KEY;
-   
+
     entry->prefixlen = prefix_len_bits;
     entry->ifindex = ifindex;
     memcpy(&entry->prefix, prefix, prefix_len_bits / 8);
-    if (next_hop){
+    if (next_hop)
       memcpy(&entry->next_hop, next_hop, sizeof(struct in6_addr));
-     dbg("IPForwardingEngine-Routes","Add destination \t\t\t gateway \t\t\t interface \t\t\t\n");
-     inet_ntop6(&entry->prefix,print_buf4, 128);
-     dbg("IPForwardingEngine-Routes", "\t  %s", print_buf4);
-     dbg_clear("IPForwardingEngine-Routes","/%i\t\t", entry->prefixlen);
-     inet_ntop6(&entry->next_hop, print_buf4, 128);
-      if(&entry->prefixlen == 0){
-          dbg_clear("IPForwardingEngine-Routes", "\t\t %s", print_buf4);
-        }
-        else{
-          dbg_clear("IPForwardingEngine-Routes", "\t\t %s", print_buf4);
-        }       	
-        dbg_clear("IPForwardingEngine-Routes","\t\t %i \n",entry->ifindex);
-    }
     return entry->key;
   }
 
   command error_t ForwardingTable.delRoute(route_key_t key) {
     int i;
-    static char print_buf5[128];
-    dbg("IPForwardingEngine","IPForwardingEngine: Delete Route!\n");
     for (i = 0; i < ROUTE_TABLE_SZ; i++) {
       if (routing_table[i].key == key) {
         /* remove the default route? */
         if (routing_table[i].prefixlen == 0) {
-          dbg("IPForwardingEngine","IPForwardingEngine: signal defaultRouteRemoved\n");
           signal ForwardingTableEvents.defaultRouteRemoved();
         }
 
         memmove((void *)&routing_table[i], (void *)&routing_table[i+1],
                 sizeof(struct route_entry) * (ROUTE_TABLE_SZ - i - 1));
         routing_table[ROUTE_TABLE_SZ-1].valid = 0;
-        dbg("IPForwardingEngine-Routes","Delete destination \t\t\t gateway \t\t\t interface \t\t\t\n");
-        inet_ntop6(&routing_table[i].prefix, print_buf5, 128);
-        dbg("IPForwardingEngine-Routes", "\t  %s", print_buf5);
-        dbg_clear("IPForwardingEngine-Routes","/%i\t\t", routing_table[i].prefixlen);
-        inet_ntop6(&routing_table[i].next_hop, print_buf5, 128);
-        if(routing_table[i].prefixlen == 0){
-          dbg_clear("IPForwardingEngine-Routes", "\t\t %s", print_buf5);
-        }
-        else{
-          dbg_clear("IPForwardingEngine-Routes", "\t %s", print_buf5);
-        }       	
-        dbg_clear("IPForwardingEngine-Routes","\t\t\t %i \n",routing_table[i].ifindex);
         return SUCCESS;
       }
     }
@@ -203,8 +188,18 @@ module IPForwardingEngineP {
     return routing_table;
   }
 
-  command error_t IP.send(struct ip6_packet *pkt) {
+  error_t do_send(uint8_t ifindex, struct in6_addr *next, struct ip6_packet *pkt) {
+    error_t rc;
+    struct in6_iid *iid = call Pool.get();
+    if (iid != NULL)
+      memcpy(iid->data, &next->s6_addr[8], 8);
+    rc = call IPForward.send[ifindex](next, pkt, iid);
+    if (rc != SUCCESS && iid != NULL)
+      call Pool.put(iid);
+    return rc;
+  }
 
+  command error_t IP.send(struct ip6_packet *pkt) {
     struct route_entry *next_hop_entry = 
       call ForwardingTable.lookupRoute(pkt->ip6_hdr.ip6_dst.s6_addr, 128);
 
@@ -230,20 +225,25 @@ module IPForwardingEngineP {
          addressed don't work on other links...  we should probably do
          ND in this case, or at least keep a cache so we can reply to
          messages on the right interface. */
-      printf("Forwarding -- send to LL address \n");
+      printf("Forwarding -- send to LL address:");
+      printf_in6addr(&pkt->ip6_hdr.ip6_dst);
+      printf("\n");
       pkt->ip6_hdr.ip6_hlim = 1;
-      return call IPForward.send[ROUTE_IFACE_154](&pkt->ip6_hdr.ip6_dst, pkt, 
-                                                  (void *)ROUTE_INVAL_KEY);
+      // only do this for unicast packets
+      if (pkt->ip6_hdr.ip6_dst.s6_addr[0] != 0xff) {
+        return do_send(ROUTE_IFACE_154, &pkt->ip6_hdr.ip6_dst, pkt);
+      } else {
+        return call IPForward.send[ROUTE_IFACE_154](&pkt->ip6_hdr.ip6_dst, pkt, NULL);
+      }
     } else if (next_hop_entry) {
-      printf("Forwarding -- got from routing table \n");
+      printf("Forwarding -- got from routing table\n");
 
       /* control messages do not need routing headers */
       if (!(signal ForwardingEvents.initiate[next_hop_entry->ifindex](pkt,
-                                                                      &next_hop_entry->next_hop)))
+                                             &next_hop_entry->next_hop)))
         return FAIL;
 
-      return call IPForward.send[next_hop_entry->ifindex](&next_hop_entry->next_hop, pkt, 
-                                                          (void *)next_hop_entry->key);
+      return do_send(next_hop_entry->ifindex, &next_hop_entry->next_hop, pkt);
     } 
     return FAIL;
   }
@@ -253,10 +253,7 @@ module IPForwardingEngineP {
   }
 
   event void IPForward.recv[uint8_t ifindex](struct ip6_hdr *iph, void *payload, 
-                                             struct ip6_metadata *meta) { 
-    static char print_buf_src[128];
-    static char print_buf_dst[128];
-    static char print_buf_nexthop[128];
+                                             struct ip6_metadata *meta) {
     struct ip6_packet pkt;
     struct in6_addr *next_hop;
     size_t len = ntohs(iph->ip6_plen);
@@ -315,100 +312,75 @@ module IPForwardingEngineP {
      
       memcpy(&pkt.ip6_hdr, iph, sizeof(struct ip6_hdr));
       pkt.ip6_data = &v;
+      pkt.ip6_inputif = ifindex;
 
       /* give the routing protocol a chance to do data-path validation
          on this packet. */
       /* RPL uses this to update the flow label fields */
-
       if (!(signal ForwardingEvents.approve[next_hop_ifindex](&pkt, next_hop)))
-            return;
-  
-      inet_ntop6(&pkt.ip6_hdr.ip6_src, print_buf_src, 128);
-      inet_ntop6(&pkt.ip6_hdr.ip6_dst, print_buf_dst, 128);
-      dbg ("IPForwardingEngine-PTr", "Node: %i is forwarding Packet from src: %s to dst: %s Time: %s \n",TOS_NODE_ID, print_buf_src, print_buf_dst, sim_time_string());
-         
-      call IPForward.send[next_hop_ifindex](next_hop, &pkt, (void *)next_hop_key);
+        return;
+
+      do_send(next_hop_ifindex, next_hop, &pkt);
     }
   }
   
   event void IPForward.sendDone[uint8_t ifindex](struct send_info *status) {
-    struct route_entry *entry;
-    int key = (int)status->upper_data;
+    struct in6_addr next;
+    struct in6_iid *iid = (struct in6_iid *)status->upper_data;
+    memset(next.s6_addr, 0, 16);
+    next.s6_addr16[0] = htons(0xfe80);
+    printf("sendDone: iface: %i key: %p\n", ifindex, iid);
 
-    printf("sendDone: iface: %i key: %i \n", ifindex, key);
-    if (key != ROUTE_INVAL_KEY) {
-      entry = call ForwardingTable.lookupRouteKey(key);
-      if (entry) {
-        printf("got entry... signal %d \n", status->link_transmissions);
-        signal ForwardingEvents.linkResult[ifindex](&entry->next_hop, status);
-      }
+    if (iid != NULL) {
+      memcpy(&next.s6_addr[8], iid->data, 8);
+      signal ForwardingEvents.linkResult[ifindex](&next, status);
+      call Pool.put(iid);
     }
   }
 
 #if defined (PRINTFUART_ENABLED)  || defined (TOSSIM)
   event void PrintTimer.fired() {
     int i;
-    static char print_buff[64];
-    static char print_buf3[128];
-    int routing_table_size = 0;
+    printf("\ndestination                 gateway            interface\n");
     for (i = 0; i < ROUTE_TABLE_SZ; i++) {
       if (routing_table[i].valid) {
-        routing_table_size++;
+        printf_in6addr(&routing_table[i].prefix);
+        printf("/%i\t\t", routing_table[i].prefixlen);
+        printf_in6addr(&routing_table[i].next_hop);
+        printf("\t\t%i\n", routing_table[i].ifindex);
       }
     }
-    dbg("IPForwardingEngine-Routes","\t destination \t\t\t gateway \t\t\t interface \t\t\t %i Table Size \n", routing_table_size);
-    for (i = 0; i < ROUTE_TABLE_SZ; i++) {
-      if (routing_table[i].valid) {  
-        inet_ntop6(&routing_table[i].prefix, print_buf3, 128);
-        dbg("IPForwardingEngine-Routes", "\t\t %s", print_buf3);	
-        dbg_clear("IPForwardingEngine-Routes","/%i\t\t", routing_table[i].prefixlen);
-	inet_ntop6(&routing_table[i].next_hop, print_buff, 64);
-        inet_ntop6(&routing_table[i].next_hop, print_buf3, 128);
-        if(routing_table[i].prefixlen == 0){
-          dbg_clear("IPForwardingEngine-Routes", "\t\t %s", print_buf3);
-        }
-        else{
-          dbg_clear("IPForwardingEngine-Routes", "\t %s", print_buf3);
-        }       	
-        dbg_clear("IPForwardingEngine-Routes","\t\t %i \n",routing_table[i].ifindex);
-
-      }
-    }
+    printf("\n");
     printfflush();
   }
 #endif
 
- default event bool ForwardingEvents.approve[uint8_t idx](struct ip6_packet *pkt,
-                                                          struct in6_addr *next_hop) {
-   return TRUE;
- }
- default event bool ForwardingEvents.initiate[uint8_t idx](struct ip6_packet *pkt,
+  default event bool ForwardingEvents.approve[uint8_t idx](struct ip6_packet *pkt,
                                                            struct in6_addr *next_hop) {
-   return TRUE;
- }
- default event void ForwardingEvents.linkResult[uint8_t idx](struct in6_addr *host,
-                                                             struct send_info * info) {}
-  
- /*   default event void ForwardingEvents.drop[uint8_t idx](struct ip6_hdr *iph, */
- /*                                                         void *payload, */
- /*                                                         size_t len, */
- /*                                                         int reason) {} */
-
- default command error_t IPForward.send[uint8_t ifindex](struct in6_addr *next_hop,
-                                                         struct ip6_packet *pkt,
-                                                         void *data) {
-   //     if (ifindex == ROUTE_IFACE_ALL) {
-   //       call IPForward.send[ROUTE_IFACE_PPP](next_hop, pkt, data);
-   //       call IPForward.send[ROUTE_IFACE_154](next_hop, pkt, data);
-   //     }
-   return SUCCESS;
- }
-
- default event void IPRaw.recv(struct ip6_hdr *iph, void *payload,
-                               size_t len, struct ip6_metadata *meta) {}
-
- default event void ForwardingTableEvents.defaultRouteAdded() {}
- default event void ForwardingTableEvents.defaultRouteRemoved() {}
-
- event void IPAddress.changed(bool global_valid) {}
+    return TRUE;
   }
+  default event bool ForwardingEvents.initiate[uint8_t idx](struct ip6_packet *pkt,
+                                                            struct in6_addr *next_hop) {
+    return TRUE;
+  }
+  default event void ForwardingEvents.linkResult[uint8_t idx](struct in6_addr *host,
+                                                              struct send_info * info) {}
+  
+  default command error_t IPForward.send[uint8_t ifindex](struct in6_addr *next_hop,
+                                                          struct ip6_packet *pkt,
+                                                          void *data) {
+//     if (ifindex == ROUTE_IFACE_ALL) {
+//       call IPForward.send[ROUTE_IFACE_PPP](next_hop, pkt, data);
+//       call IPForward.send[ROUTE_IFACE_154](next_hop, pkt, data);
+//     }
+    return SUCCESS;
+  }
+
+  default event void IPRaw.recv(struct ip6_hdr *iph, void *payload,
+                                size_t len, struct ip6_metadata *meta) {}
+
+  default event void ForwardingTableEvents.defaultRouteAdded() {}
+  default event void ForwardingTableEvents.defaultRouteRemoved() {}
+
+  event void IPAddress.changed(bool global_valid) {}
+}

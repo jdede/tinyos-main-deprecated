@@ -60,9 +60,9 @@ configuration UDPEchoC {
   UDPEchoP.IPStats -> IPDispatchC;
   UDPEchoP.UDPStats -> UdpC;
 
-#ifdef TOSSIM
 #ifdef RPL_ROUTING
   components RPLRoutingC;
+#ifdef TOSSIM
   UDPEchoP.RootControl -> RPLRoutingC;
 #endif
 #endif
