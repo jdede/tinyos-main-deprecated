@@ -499,6 +499,7 @@ void SENDINFO_DECR(struct send_info *si) {
     struct lowpan_ctx ctx;
     struct send_info  *s_info;
     struct send_entry *s_entry;
+    struct ieee154_frame_addr *s_fa;
 
     message_t *outgoing;
 
@@ -573,6 +574,20 @@ void SENDINFO_DECR(struct send_info *si) {
       s_entry->msg = outgoing;
       s_entry->info = s_info;
 
+      dbg("Driver.debug", "IPDispatchP: msg %x\n",
+          s_entry->msg);
+
+      s_fa = (struct ieee154_frame_addr *)ip_malloc(sizeof(struct ieee154_frame_addr));
+
+      memcpy(&(s_fa->ieee_dst), &(frame_addr->ieee_dst), sizeof(ieee154_addr_t));
+      memcpy(&(s_fa->ieee_src), &(frame_addr->ieee_src), sizeof(ieee154_addr_t));
+      memcpy(&(s_fa->ieee_dstpan), &(frame_addr->ieee_dstpan), sizeof(ieee154_panid_t));
+
+      s_entry->frame_addr = s_fa;
+      dbg("Driver.debug", "IPDispatchP: IPLower.send dest %hu\n", s_entry->frame_addr->ieee_dst.i_saddr);
+      dbg("Driver.debug", "IPDispatchP: IPLower.send src %hu\n", s_entry->frame_addr->ieee_src.i_saddr);
+      dbg("Driver.debug", "IPDispatchP: IPLower.send dest mode %hu\n", s_entry->frame_addr->ieee_dst.ieee_mode);
+
       /* configure the L2 */
       if (frame_addr->ieee_dst.ieee_mode == IEEE154_ADDR_SHORT &&
           frame_addr->ieee_dst.i_saddr == IEEE154_BROADCAST_ADDR) {
@@ -632,6 +647,7 @@ void SENDINFO_DECR(struct send_info *si) {
     call FragPool.put(s_entry->msg);
     call SendEntryPool.put(s_entry);
     call SendQueue.dequeue();
+    ip_free(s_entry->frame_addr);
 
     post sendTask();
   }
