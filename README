@@ -1,8 +1,33 @@
-This contains Morten's TinyOS Tree which is an extended version of the
-main TinyOS tree from http://code.google.com/p/tinyos-main
+This repository contains a simulation environment for TinyOS. It is an
+adapted version of Morten's TinyOS fork.
 
-The current features include:
+It contains an old version of TinyOS. The last sync with the master was in
+February 2012!
 
-- TOSSIM transforms printf(...) statements into dbg("printf",...) statements
-- tinyos/tossim/TossimHelp.py lib added to make TOSSIM scripting easier
+How to use:
 
+General setup:
+- clone this repository
+- Adapt paths (TOSROOT, TOSDIR...)
+- cd to support/sdk/c/blib
+- Execute
+ ./bootstrap.sh
+ ./configure
+ make
+
+
+How to compile the app and run the simulation:
+- cd to apps/UDPEcho
+- Build simulation libraries: make micaz sim-rpl blip
+- Start the simulation: ./sim/Simulation.py
+- The results are located in sim/output/suite_<date>/
+
+
+In case of error, ensure you have the following packets installed:
+
+python-dev
+python-numpy
+python-matplotlib
+python-scipy
+
+sudo apt-get instal python-dev python-numpy python-matplotlib python-scipy
