@@ -30,4 +30,4 @@ python-numpy
 python-matplotlib
 python-scipy
 
-sudo apt-get instal python-dev python-numpy python-matplotlib python-scipy
+sudo apt-get install python-dev python-numpy python-matplotlib python-scipy
